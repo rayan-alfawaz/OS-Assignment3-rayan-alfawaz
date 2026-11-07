@@ -32,11 +32,11 @@
 
 | Field | Your Answer |
 |-------|-------------|
-| **Full Name** | [Write your full name here] |
-| **Student ID** | [Write your student ID here] |
-| **University Email** | [yourid]@std.psau.edu.sa |
-| **GitHub Username** | [your-github-username] |
-| **Repository Link** | [Paste your repository link here] |
+| **Full Name** | [Rayan Ibrahim AlFawaz] |
+| **Student ID** | [446050856] |
+| **University Email** | [446050856@std.psau.edu.sa] |
+| **GitHub Username** | [rayan-alfawaz] |
+| **Repository Link** | [https://github.com/rayan-alfawaz/OS-Assignment3-rayan-alfawaz/tree/main] |
  
 ---
 
@@ -132,81 +132,86 @@
 
 ## Your Development Log
 
-### Entry 1 - [Date and Time]
-**What I did**:
+### Entry 1 - [November 4, 2026, 8:00 PM]
+**What I did**: Forked the repository, setup environment, and tested the starter code.
 
 **Details**:
+- Forked the repo and changed the student ID to my actual ID (446050856).
+- Ran the original starter code to observe the intentional failures.
+- The program crashed immediately with a `NullPointerException` inside the `ReadyQueue.snapshot()` method, and the watchdog reported mismatched expected values.
 
-**Challenges**:
+**Challenges**: I was confused by the terminal output and why the crash happened inside `LinkedList`.
 
-**Solution**:
+**Solution**: Analyzed the error trace and realized two CPU threads were accessing the shared ready queue simultaneously (one polling, one snapshotting) causing a `ConcurrentModificationException`.
 
-**Time spent**:
+**Time spent**: 45 minutes
 
 ---
 
-### Entry 2 - [Date and Time]
-**What I did**:
+### Entry 2 - [November 5, 2026, 4:15 PM]
+**What I did**: Implemented Feature 1 (Mutex lock on Ready Queue).
 
 **Details**:
+- Added a `ReentrantLock` named `queueLock` to the `ReadyQueue` class.
+- Protected all accesses to the `list` and `map` inside `add()`, `poll()`, `processOf()`, and `snapshot()` methods using `lock()` and `try/finally { unlock(); }`.
+- Ran the simulation: the crashes stopped entirely, but the verification block still showed mismatches (e.g., observed 0 for context switches).
 
-**Challenges**:
+**Challenges**: Ensuring that the `unlock()` in the `poll()` method was correctly placed so it executes even when the method returns early.
 
-**Solution**:
+**Solution**: Always placed `unlock()` inside the `finally` block, leaving the `return` statements safely inside the `try` block.
 
-**Time spent**:
+**Time spent**: 1 hour
 
 ---
 
-### Entry 3 - [Date and Time]
-**What I did**:
+### Entry 3 - [November 6, 2026, 5:30 PM]
+**What I did**: Implemented Feature 2 (Mutex locks on Shared Statistics).
 
 **Details**:
+- Analyzed `SharedStats` and decided to use fine-grained locking: one independent lock for each of the three variables to maximize concurrency.
+- Created `contextSwitchLock`, `completedProcessLock`, and `serviceTimeLock`.
+- Protected the three writer methods (`increment...`) and the three reader methods (`get...`).
+- Ran the code: the first three lines in the verification block now correctly show ✔.
 
-**Challenges**:
+**Challenges**: Remembering to lock the "getters" (readers) as well as the "setters", because a read during a write is also a race condition.
 
-**Solution**:
+**Solution**: Added `try/finally` blocks to all getter methods with their respective locks.
 
-**Time spent**:
+**Time spent**: 1 hour
 
 ---
 
-### Entry 4 - [Date and Time]
-**What I did**:
+### Entry 4 - [November 7, 2026, 7:00 PM]
+**What I did**: Implemented Feature 3 (Replaced busy waiting with a Counting Semaphore).
 
 **Details**:
+- Added a `Semaphore availableProcesses = new Semaphore(0)` in `ReadyQueue`.
+- Called `release()` in the `add()` method whenever a new process is added.
+- In `CpuWorker`, removed the `Thread.sleep(20)` loop (busy waiting) and replaced it with `availableProcesses.acquire()`.
+- Implemented a clean shutdown by having the last finishing CPU release enough permits to wake up all remaining sleeping CPUs.
 
-**Challenges**:
+**Challenges**: The CPUs were getting stuck at the end of the simulation, causing the watchdog to trigger because they were waiting forever on an empty queue.
 
-**Solution**:
+**Solution**: Added a broadcast `release(totalCPUs)` when `completedProcessCount == totalProcesses` to wake everyone up.
 
-**Time spent**:
+**Time spent**: 1.5 hours
 
 ---
 
-### Entry 5 - [Date and Time]
-**What I did**:
+### Entry 5 - [November 7, 2026, 9:00 PM]
+**What I did**: Code documentation and preparing MY_WORK answers.
 
 **Details**:
+- Added English explanatory comments for Feature 1, 2, and 3 in the code.
+- Verified that `Busy-waiting polls` is strictly 0 and all verification checks are green.
+- Filled out the Development Log in `MY_WORK.md` and started drafting the technical reflection answers.
+- Committed these documentation updates to GitHub.
 
-**Challenges**:
+**Challenges**: Explaining the concepts clearly in English and ensuring I fully understood why the semaphore's initial value must be 0.
 
-**Solution**:
+**Solution**: Reviewed the Chapter 5 slides on Producer-Consumer problems to solidify my understanding before writing the answers.
 
-**Time spent**:
-
----
-
-### Entry 6 - [Optional - Date and Time]
-**What I did**:
-
-**Details**:
-
-**Challenges**:
-
-**Solution**:
-
-**Time spent**:
+**Time spent**: 1 hour
 
 ---
 
@@ -214,13 +219,13 @@
 
 > 💡 **TIP:** Fill this in **last**, after all entries are written.
 
-**Total time spent on assignment**: [X hours]
+**Total time spent on assignment**: 5 hours
 
-**Most challenging part**:
+**Most challenging part**: Managing the clean shutdown of threads in Feature 3. If the final wake-up signal was missed, the whole system would hang in a deadlock-like state.
 
-**Most interesting learning**:
+**Most interesting learning**: Seeing how much CPU power is wasted on busy-waiting (thousands of empty polls) and how elegantly a Semaphore solves it by putting the threads to sleep.
 
-**What I would do differently next time**:
+**What I would do differently next time**: I would plan the lock granularity (Feature 2) on paper before typing the code, to clearly visualize which threads need access to which variables.
 
 ---
 
