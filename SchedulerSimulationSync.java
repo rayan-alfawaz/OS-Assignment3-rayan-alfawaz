@@ -110,13 +110,14 @@ class ReadyQueue {
     private final Map<Thread, Process> map = new HashMap<>();     // thread -> process (same idea as Assignment 1)
 
     // TODO Feature 1: declare the lock protecting `list` and `map` here
+    // Using ReentrantLock to ensure mutual exclusion when accessing the shared ready queue
     private final ReentrantLock queueLock = new ReentrantLock();
     // TODO Feature 3: declare the counting semaphore that counts the processes waiting in the ready queue here
 
     // Add a process to the ready queue (new process, or a process that did not finish its quantum)
     public void add(Process process) {
         // TODO Feature 1: protect this critical section
-        queueLock.lock();
+        queueLock.lock();// Acquire lock before modifying the shared queue
         try {
         Thread thread = new Thread(process);
         list.add(thread);
@@ -129,14 +130,14 @@ class ReadyQueue {
                 " │ Remaining: " + Colors.YELLOW + process.getRemainingTime() + "ms" + Colors.RESET +
                 " of " + process.getBurstTime() + "ms");
        } finally {   
-        queueLock.unlock();
+        queueLock.unlock();// Always release the lock in a finally block to prevent deadlocks
        }      
     }
 
     // Remove and return the thread at the head of the queue (or null if the queue is empty)
     public Thread poll() {
         // TODO Feature 1: protect this critical section
-        queueLock.lock();
+        queueLock.lock();// Acquire lock before reading and removing the head
         try {
         if (list.isEmpty()) {
             return null;
@@ -146,13 +147,13 @@ class ReadyQueue {
         list.removeFirst();                 // 2) remove the head (it may be a different thread by now!)
         return head;
         } finally {
-            queueLock.unlock();
+            queueLock.unlock();// Safe release even if we return early
         }
     }
 
     public Process processOf(Thread thread) {
         // TODO Feature 1: protect this access
-        queueLock.lock();
+        queueLock.lock();// Protect read access to the map
         try {
         return map.get(thread);
         } finally {
@@ -163,7 +164,7 @@ class ReadyQueue {
     // Names of the processes currently waiting in the queue (used to display the ready queue)
     public String snapshot() {
         // TODO Feature 1: protect this critical section
-        queueLock.lock();
+        queueLock.lock();// Protect iteration to avoid ConcurrentModificationException
         try {
         StringBuilder sb = new StringBuilder();
         for (Thread t : list) {
