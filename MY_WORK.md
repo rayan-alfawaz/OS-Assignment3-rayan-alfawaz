@@ -303,20 +303,30 @@
 
 **Your Answer:** *(3-5 sentences)*
 
-[Write your answer here.]
+[In my original starter run, the simulation failed because a ConcurrentModificationException crashed the threads before they could finish, leaving all observed statistics at 0 instead of their expected values (31 context switches, 18 completed processes, and 123533 ms service time). If the crash hadn't stopped execution, lost updates would occur on the shared counters due to the lack of mutual exclusion. On a real machine, this bug can happen without RaceWindow because the operating system can preempt a thread at the hardware level at any microsecond. It is notoriously hard to detect because it depends entirely on unpredictable thread scheduling, meaning the program might run flawlessly many times before silently corrupting the data.]
 
 Verification block of the **original starter**:
 ```
-[Paste the verification block (or the exception/watchdog message) of the starter here]
+[═══ VERIFICATION (expected values are computed from YOUR seed) ═══
+  Context switches (quanta executed)     expected 31       observed 0        ✘ MISMATCH
+  Completed processes                    expected 18       observed 0        ✘ MISMATCH
+  Total service time (ms)                expected 123533   observed 0        ✘ MISMATCH
+  Busy-waiting polls (must be 0)         expected 0        observed 0        ✔
+  ✘ At least one check failed (see the ✘ lines above): a race condition or busy waiting is still present.]
 ```
 
 Verification block of **my final version**:
 ```
-[Paste the verification block of your final version here (all lines ✔)]
+[═══ VERIFICATION (expected values are computed from YOUR seed) ═══
+  Context switches (quanta executed)     expected 31       observed 31       ✔
+  Completed processes                    expected 18       observed 18       ✔
+  Total service time (ms)                expected 123533   observed 123533   ✔
+  Busy-waiting polls (must be 0)         expected 0        observed 0        ✔
+  ✔ All shared values are consistent.]
 ```
 
 **Explanation of the timeline:**
-[Explain the lost update step by step.]
+[A lost update happens step by step as follows: CPU-1 reads contextSwitchCount (e.g., value is 10) and is then preempted by the OS during RaceWindow.pause(). Simultaneously, CPU-2 reads the exact same value (10). CPU-1 resumes, adds 1, and writes back 11. CPU-2 also adds 1 to its read value and writes back 11. One increment is permanently lost because both CPUs overwrote each other based on the same stale read.]
 
 ## Question 2: Critical Sections and Lock Granularity
 
@@ -326,12 +336,14 @@ Verification block of **my final version**:
 
 **Your Answer:** *(3-5 sentences)*
 
-[Write your answer here.]
+[I protected the ready queue operations using a single ReentrantLock named queueLock, and the SharedStats counters using three independent locks (contextSwitchLock, completedProcessLock, and serviceTimeLock). I chose one lock per variable (fine-grained locking) to maximize concurrency, allowing different CPUs to safely update different statistics simultaneously without unnecessarily blocking each other. The ready queue requires a completely different lock to decouple queue management from statistics tracking, preventing overall performance bottlenecks. By using lock() and try/finally { unlock(); }, I ensured strict mutual exclusion; however, since a default ReentrantLock is not fair, it does not guarantee bounded waiting, meaning a heavily loaded thread could theoretically be starved.]
 
 | Critical section (variable / method) | Lock used | Why it needs protection |
 |---|---|---|
-| [e.g., `ReadyQueue.poll()`] | [lock name] | [reason] |
-| [...] | [...] | [...] |
+| [ReadyQueue: add(), poll(), processOf(), snapshot()] | [queueLock] | [To prevent ConcurrentModificationException and lost processes when multiple CPUs access the list and map simultaneously.] |
+| [SharedStats: contextSwitchCount updates and reads] | [contextSwitchLock] | [To prevent lost updates during the read-modify-write cycle when CPUs log a new quantum.] |
+| [SharedStats: completedProcessCount updates and reads] | [completedProcessLock] | [To ensure the simulation stops accurately without losing the final completion signal.] |
+| [SharedStats: totalServiceTime updates and reads] | [serviceTimeLock] | [To accurately accumulate the sum of CPU time without race conditions.] |
 
 ## Question 3: Busy Waiting vs Semaphore
 
@@ -341,7 +353,7 @@ Verification block of **my final version**:
 
 **Your Answer:** *(3-5 sentences)*
 
-[Write your answer here.]
+[The starter code's busy waiting forced the CPUs to repeatedly poll an empty queue inside a while loop, checking if the thread was null and sleeping for 20ms, which pointlessly wasted thousands of CPU cycles. I replaced this with a counting semaphore whose value directly represents the exact number of processes currently waiting in the ready queue. Its initial value is 0 because the queue is completely empty at the start, and it becomes exactly 18 right after the main thread's initial add() calls. The last active CPU must call release(totalCPUs) to broadcast a clean shutdown signal; if it did not, the remaining CPUs would stay indefinitely blocked on acquire(), resulting in a hung program and a watchdog timeout.]
 
 ## Question 4: Classical Problems and Deadlock
 
@@ -352,24 +364,24 @@ Verification block of **my final version**:
 **Your Answer:** *(3-5 sentences)*
 
 **Classical problem and roles**:
-[Name the problem; who is the producer, who is the consumer?]
+[This is the classic Producer-Consumer synchronization problem. In our simulation, the CPUs uniquely act as both consumers (when they pull a process from the queue to execute) and producers (when they re-enqueue a process that hasn't finished its burst time).]
 
 **Semaphores for a bounded queue (name and initial value)**:
-[Name the three semaphores and their initial values.]
+[We would need three semaphores: 1) empty (initial value = K, counting available slots), 2) full (initial value = 0, counting available items), and 3) mutex (initial value = 1, ensuring mutual exclusion).]
 
 **Deadlock scenario and prevention**:
-[Describe the scenario and the necessary condition you would break.]
+[A deadlock would occur if a producer acquired the mutex first, then waited on the empty semaphore when the queue was entirely full; the consumer could never consume to free space because it needs the mutex held by the sleeping producer. We prevent this by breaking the "Hold and Wait" condition, enforcing a strict ordering where threads must acquire the scheduling semaphores (empty or full) before acquiring the mutex lock.]
 
 ## Summary
 
 **Key concepts I understood through these questions:**
-1.
-2.
-3.
+1.How race conditions silently corrupt data during read-modify-write operations at the microsecond level.
+2.The importance of fine-grained locking to maximize concurrency without causing performance bottlenecks.
+3.How counting semaphores efficiently eliminate busy-waiting by putting idle threads to sleep safely.
 
 **Concepts I need to study more:**
-1.
-2.
+1.Advanced deadlock avoidance algorithms in complex operating systems, such as the Banker's Algorithm.
+2.How the lack of bounded waiting in default ReentrantLock implementations could theoretically cause thread starvation in massive applications.
 
 ---
 
