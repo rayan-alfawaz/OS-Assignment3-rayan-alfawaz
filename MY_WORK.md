@@ -245,7 +245,7 @@
 
 **Your Answer:** *(5-7 sentences)*
 
-[Write your answer here.]
+[Through this assignment, I learned how easily race conditions can silently corrupt shared data when multiple CPUs execute concurrently. I saw firsthand how a lost update occurs when threads read and write to the same variable, like the contextSwitchCount, without proper protection. I learned to identify these critical sections and protect them using ReentrantLock in a try/finally block to ensure mutual exclusion safely. Furthermore, I understood the importance of lock granularity, realizing that using independent locks for independent variables maximizes the overall system performance. Finally, I learned how a counting Semaphore effectively puts threads to sleep, preventing the massive waste of CPU cycles caused by busy waiting on an empty queue.]
 
 ## Question 2: What was the most challenging part of this assignment?
 
@@ -253,7 +253,7 @@
 
 **Your Answer:** *(5-7 sentences)*
 
-[Write your answer here.]
+[The most challenging part of this assignment was implementing the clean shutdown logic for the CPU threads in Feature 3. Initially, I simply replaced the busy-waiting sleep with a semaphore acquire() call, which worked perfectly while processes were still running. However, when the simulation reached the end and all processes were completed, the remaining CPUs stayed blocked forever because the ready queue was permanently empty. It was difficult to figure out exactly when and how to wake up these sleeping threads without causing a race condition or breaking the loop early. This deadlock-like situation caused the watchdog timer to stop the program, failing the verification. I had to carefully think about broadcasting a final wake-up signal using release(totalCPUs) to ensure all threads could exit their methods properly.]
 
 ## Question 3: How did you overcome the challenges you faced?
 
@@ -261,7 +261,7 @@
 
 **Your Answer:** *(5-7 sentences)*
 
-[Write your answer here.]
+[I overcame these synchronization challenges by taking a systematic, step-by-step approach to testing and debugging. Instead of writing all the features at once, I implemented one lock at a time and ran the simulation repeatedly to isolate where the remaining errors were coming from. I heavily relied on the Chapter 5 course slides to understand the theoretical difference between mutex locks and semaphores before writing the Java code. Whenever the watchdog timer triggered or a deadlock occurred, I analyzed the console output to trace which CPU was polling the queue. I also reviewed the Java documentation for ReentrantLock and Semaphore to understand how their methods interact under the hood. Finally, I made sure to strictly follow the assignment hints about placing unlock() inside finally blocks to guarantee locks are always released securely.]
 
 ## Question 4: Where can synchronization concepts be applied in real-world applications?
 
@@ -269,7 +269,7 @@
 
 **Your Answer:** *(5-7 sentences)*
 
-[Write your answer here.]
+[The synchronization concepts I applied here are essential for building any robust real-world backend software system. For example, in a banking application, mutex locks are absolutely critical to prevent race conditions when two users try to transfer money from the same account simultaneously. If the balance update is not mutually exclusive, the bank could easily lose money due to a lost update just like our shared statistics did. Another great application is an online ticket booking system, where a counting semaphore can represent the exact number of available seats. When a user books a ticket, they acquire a permit, ensuring the system never oversells tickets to concurrent users. Finally, these concepts are vital for database management systems, where multiple queries must safely read and write to the same tables without causing deadlocks.]
 
 ### Optional: What would you like to learn more about?
 
